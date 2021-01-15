@@ -1,0 +1,6 @@
+{
+  "scripts": {
+    "compile-server": "cd server && tsc -w",
+    "dev-server": "cd server && npm start"
+  }
+}
