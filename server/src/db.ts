@@ -37,3 +37,9 @@ const user = new mongoose.Schema({
 
 // collections
 export const users = mongoose.model("users", user);
+export const refreshTokens = mongoose.model("refreshTokens", new mongoose.Schema({
+  token: {
+    type: String,
+    required: true
+  }
+}));

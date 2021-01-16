@@ -7,7 +7,7 @@ import jwt = require("jsonwebtoken");
 import * as bcrypt from "bcryptjs";
 
 // connect to mongodb and import all collection for use in querys
-import { users } from "./db";
+import { users, refreshTokens } from "./db";
 
 const app = express();
 const PORT = 8081;
@@ -30,9 +30,9 @@ function authJWT(req: any, res: any, next: any) {
 
     jwt.verify(token, process.env.JWT_SECRET, (err: any, user: any) => {
       if (err) {
-        res.sendStauts({
+        res.json({
           status: "error",
-          msg: "User not signed in",
+          msg: "Forbidden",
           err: "403"
         });
       }
@@ -41,7 +41,7 @@ function authJWT(req: any, res: any, next: any) {
       next();
     });
   } else {
-    res.sendStauts({
+    res.json({
       status: "error",
       msg: "User doesn't have needed rights",
       err: "401"
@@ -87,9 +87,23 @@ app.post("/signup", rateLimit({
         });
       } else {
         // also signin user after signup
-        const accessToken = jwt.sign({ email: doc.email, role: doc.role }, process.env.JWT_SECRET);
+        const accessToken = jwt.sign({ email: doc.email, role: doc.role }, process.env.JWT_SECRET, { expiresIn: "30min" });
+        const refreshToken = jwt.sign({ email: doc.email, role: doc.role }, process.env.JWT_SECRET);
+        refreshTokens.findOneAndUpdate({ token: refreshToken }, {}, { upsert: true, new: true }, (err: any, doc: any, res) => {
+          if (err) {
+            res.json({
+              status: "error",
+              msg: "Couldn't add new refresh token",
+              error: err
+            });
+          }
+        });
+
         res.json({
-          accessToken
+          user: doc,
+          acessToken: accessToken,
+          refreshToken: refreshToken,
+          msg: "Signed up user"
         });
       }
     });
@@ -110,10 +124,12 @@ app.post("/signin", rateLimit({
     if (err) {
       res.json({
         status: "error",
-        msg: "error when checking user",
+        msg: "Error when checking user",
         err: err
       });
     } else {
+
+      // no user found
       if (doc == null) {
         res.json({
           status: "error",
@@ -121,15 +137,79 @@ app.post("/signin", rateLimit({
         });
       } else {
         // TODO: compare passwords with bcrypt here
-        const accessToken = jwt.sign({ email: doc.email, role: doc.role }, process.env.JWT_SECRET);
+        const accessToken = jwt.sign({ email: doc.email, role: doc.role }, process.env.JWT_SECRET, { expiresIn: "30min" });
+        const refreshToken = jwt.sign({ email: doc.email, role: doc.role }, process.env.JWT_SECRET);
+        refreshTokens.create(new refreshTokens({ token: refreshToken }), (err: any, doc: any) => {
+          if (err) {
+            res.json({
+              status: "error",
+              msg: "Couldn't add new refresh token",
+              error: err
+            });
+          }
+
+        });
+
         res.json({
-          accessToken
+          user: doc,
+          acessToken: accessToken,
+          refreshToken: refreshToken,
+          msg: "Signed in user"
         });
       }
     }
 
   });
 
+});
+
+// refresh the refresh token; remove the old one from the db
+app.post("/token", async (req: any, res: any) => {
+  if (req.body.token) {
+    refreshTokens.findOne({ token: req.body.token }, (err: any, doc: any) => {
+      if (err) {
+        res.json({
+          status: "error",
+          msg: "Error when searching for token",
+          err: err
+        });
+      } else {
+        // if the token is not found
+        if (doc == null) {
+          res.json({
+            status: "error",
+            msg: "Forbidden",
+            err: "403"
+          });
+
+          // verify token and generate new access token
+        } else {
+          jwt.verify(req.body.token, process.env.JWT_SECRET, (err: any, user: any) => {
+            if (err) {
+              res.json({
+                status: "error",
+                msg: "Forbidden",
+                err: "403"
+              });
+            }
+
+            const accessToken = jwt.sign({ email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: "30min" });
+            res.json({
+              user: user,
+              acessToken: accessToken,
+              msg: "Signed up user"
+            });
+          });
+        }
+      }
+    });
+
+  } else {
+    res.json({
+      status: "error",
+      msg: "No token provided"
+    });
+  }
 });
 
 app.listen(PORT, () => console.log(`server listening on port ${PORT}.`));
