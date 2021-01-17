@@ -4,13 +4,13 @@ import morgan from "morgan";
 import bodyParser from "body-parser";
 import rateLimit from "express-rate-limit";
 import jwt = require("jsonwebtoken");
-import * as bcrypt from "bcryptjs";
+import bcrypt = require("bcryptjs");
 
 // connect to mongodb and import all collection for use in querys
-import { users, refreshTokens } from "./db";
+import { users } from "./db";
 
 const app = express();
-const PORT = 8081;
+const PORT = 3000;
 
 // load plugins
 app.use(bodyParser.json());
@@ -21,14 +21,25 @@ if (process.env.NODE_ENV != "production") {
   app.use(morgan("dev"));
 }
 
+/**
+ * MIDDLEWARES
+ */
 // authenticate the jwt token (middleware)
 function authJWT(req: any, res: any, next: any) {
+  // get header from request
   const header = req.headers.authorization;
 
+  // if header specified
   if (header) {
+
+    // get access token from header
+    // header structure == Authorization: Bearer <access token>
     const token = header.split(" ")[1];
 
+    // verify the token
     jwt.verify(token, process.env.JWT_SECRET, (err: any, user: any) => {
+
+      // if token could not be verified
       if (err) {
         res.json({
           status: "error",
@@ -37,9 +48,12 @@ function authJWT(req: any, res: any, next: any) {
         });
       }
 
+      // save user in req for further API calls
       req.user = user;
       next();
     });
+
+    // if header not specified
   } else {
     res.json({
       status: "error",
@@ -47,6 +61,11 @@ function authJWT(req: any, res: any, next: any) {
       err: "401"
     });
   }
+}
+
+// generate access token from given data and secret
+function generateAccessToken(dataToBeSaved: {}, secret: string) {
+  return jwt.sign(dataToBeSaved, secret, { expiresIn: "30d" });
 }
 
 /**
@@ -57,8 +76,8 @@ app.post("/signup", rateLimit({
   max: 5, // start blocking after
   message: "Limit reached from this IP, please try again in a few minutes"
 }), async (req: any, res: any) => {
-  // search in users collection if user with same email
-  // already
+
+  // search in users collection if user with same email exists
   if (await users.exists({
     email: req.body.email.toString()
   })) {
@@ -70,10 +89,10 @@ app.post("/signup", rateLimit({
 
   } else {
 
-    // create new user
+    // create new user from request data
     let user = new users({
       email: req.body.email.toString(),
-      password: req.body.password.toString(),
+      password: bcrypt.hashSync(req.body.password.toString(), 10),
       role: req.body.role.toString()
     });
 
@@ -86,23 +105,12 @@ app.post("/signup", rateLimit({
           error: err
         });
       } else {
-        // also signin user after signup
-        const accessToken = jwt.sign({ email: doc.email, role: doc.role }, process.env.JWT_SECRET, { expiresIn: "30min" });
-        const refreshToken = jwt.sign({ email: doc.email, role: doc.role }, process.env.JWT_SECRET);
-        refreshTokens.findOneAndUpdate({ token: refreshToken }, {}, { upsert: true, new: true }, (err: any, doc: any, res) => {
-          if (err) {
-            res.json({
-              status: "error",
-              msg: "Couldn't add new refresh token",
-              error: err
-            });
-          }
-        });
+        // sign token after sign up
+        const accessToken = generateAccessToken({ email: doc.email, role: doc.role }, process.env.JWT_SECRET);
 
         res.json({
           user: doc,
-          acessToken: accessToken,
-          refreshToken: refreshToken,
+          accessToken: accessToken,
           msg: "Signed up user"
         });
       }
@@ -128,88 +136,42 @@ app.post("/signin", rateLimit({
         err: err
       });
     } else {
-
-      // no user found
+      // if no user with given email has been found in db
       if (doc == null) {
         res.json({
           status: "error",
-          msg: "No user with this email or password"
+          msg: "Email/Password combination wrong"
         });
       } else {
-        // TODO: compare passwords with bcrypt here
-        const accessToken = jwt.sign({ email: doc.email, role: doc.role }, process.env.JWT_SECRET, { expiresIn: "30min" });
-        const refreshToken = jwt.sign({ email: doc.email, role: doc.role }, process.env.JWT_SECRET);
-        refreshTokens.create(new refreshTokens({ token: refreshToken }), (err: any, doc: any) => {
+        // compare passwords
+        bcrypt.compare(req.body.password.toString(), doc.password, (err: Error, result: Boolean) => {
           if (err) {
             res.json({
               status: "error",
-              msg: "Couldn't add new refresh token",
+              msg: "Error on password comparison",
               error: err
             });
+          } else {
+            if (!result) {
+              res.json({
+                status: "error",
+                msg: "Email/Password combination wrong"
+              });
+            } else {
+              const accessToken = generateAccessToken({ email: doc.email, role: doc.role }, process.env.JWT_SECRET);
+
+              res.json({
+                user: doc,
+                accessToken: accessToken,
+                msg: "Signed in user"
+              });
+            }
           }
-
-        });
-
-        res.json({
-          user: doc,
-          acessToken: accessToken,
-          refreshToken: refreshToken,
-          msg: "Signed in user"
         });
       }
     }
-
   });
 
-});
-
-// refresh the refresh token; remove the old one from the db
-app.post("/token", async (req: any, res: any) => {
-  if (req.body.token) {
-    refreshTokens.findOne({ token: req.body.token }, (err: any, doc: any) => {
-      if (err) {
-        res.json({
-          status: "error",
-          msg: "Error when searching for token",
-          err: err
-        });
-      } else {
-        // if the token is not found
-        if (doc == null) {
-          res.json({
-            status: "error",
-            msg: "Forbidden",
-            err: "403"
-          });
-
-          // verify token and generate new access token
-        } else {
-          jwt.verify(req.body.token, process.env.JWT_SECRET, (err: any, user: any) => {
-            if (err) {
-              res.json({
-                status: "error",
-                msg: "Forbidden",
-                err: "403"
-              });
-            }
-
-            const accessToken = jwt.sign({ email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: "30min" });
-            res.json({
-              user: user,
-              acessToken: accessToken,
-              msg: "Signed up user"
-            });
-          });
-        }
-      }
-    });
-
-  } else {
-    res.json({
-      status: "error",
-      msg: "No token provided"
-    });
-  }
 });
 
 app.listen(PORT, () => console.log(`server listening on port ${PORT}.`));

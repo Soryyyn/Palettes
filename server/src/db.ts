@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+require("mongoose-type-email");
 
 const CONNECTION_URI = "mongodb://localhost:27017/Palettes";
 
@@ -17,12 +18,17 @@ mongoose.connect(CONNECTION_URI, {
 });
 
 // schemas
-// TODO: add email verification
 // roles can be: "admin", "vip" & "member"
 const user = new mongoose.Schema({
   email: {
     type: String,
-    required: true
+    required: true,
+    validate: {
+      validator: function (mail: any) {
+        return /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(mail);
+      },
+      message: "Email not valid"
+    },
   },
   password: {
     type: String,
@@ -37,9 +43,3 @@ const user = new mongoose.Schema({
 
 // collections
 export const users = mongoose.model("users", user);
-export const refreshTokens = mongoose.model("refreshTokens", new mongoose.Schema({
-  token: {
-    type: String,
-    required: true
-  }
-}));
