@@ -21,9 +21,11 @@ if (process.env.NODE_ENV != "production") {
   app.use(morgan("dev"));
 }
 
+
 /**
  * MIDDLEWARES
  */
+
 // authenticate the jwt token (middleware)
 function authJWT(req: any, res: any, next: any) {
   // get header from request
@@ -68,9 +70,11 @@ function generateAccessToken(dataToBeSaved: {}, secret: string) {
   return jwt.sign(dataToBeSaved, secret, { expiresIn: "30d" });
 }
 
+
 /**
  * POST REQUESTS
  */
+
 app.post("/signup", rateLimit({
   windowMs: 5 * 60 * 1000,  // 5 minute window
   max: 5, // start blocking after
@@ -115,7 +119,6 @@ app.post("/signup", rateLimit({
         });
       }
     });
-
   }
 });
 
@@ -171,7 +174,6 @@ app.post("/signin", rateLimit({
       }
     }
   });
-
 });
 
 app.listen(PORT, () => console.log(`server listening on port ${PORT}.`));

@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-require("mongoose-type-email");
 
 const CONNECTION_URI = "mongodb://localhost:27017/Palettes";
 
@@ -17,7 +16,11 @@ mongoose.connect(CONNECTION_URI, {
   }
 });
 
-// schemas
+
+/**
+ * SCHEMAS
+ */
+
 // roles can be: "admin", "vip" & "member"
 const user = new mongoose.Schema({
   email: {
