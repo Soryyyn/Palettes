@@ -41,8 +41,28 @@ const user = new mongoose.Schema({
     type: String,
     required: true,
     default: "member"
+  },
+  savedPalettes: {
+    type: [String], // IDs of palettes are stored here
+    required: false
+  }
+});
+
+const palette = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true
+  },
+  owner: {
+    type: user,
+    required: true
+  },
+  colors: {
+    type: [""], // temp stored as rgb values
+    required: true
   }
 });
 
 // collections
 export const users = mongoose.model("users", user);
+export const palettes = mongoose.model("palettes", palette);
