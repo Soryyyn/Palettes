@@ -2,3 +2,8 @@
 server/node_modules/
 server/dist/
 server/.env
+
+# client
+client/.snowpack
+client/build
+client/node_modules/
