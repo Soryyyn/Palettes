@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "start": "nodemon -r dotenv/config dist/index.js"
+    "start": "ts-node src/index.ts",
+    "dev": "nodemon -r dotenv/config"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.2",
@@ -21,6 +22,7 @@
     "express-rate-limit": "^5.2.3",
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^5.11.12",
-    "morgan": "^1.10.0"
+    "morgan": "^1.10.0",
+    "ts-node": "^9.1.1"
   }
 }

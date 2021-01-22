@@ -1,6 +1,6 @@
 import { h } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
-import './App.scss';
+import '@app/styles/App.scss';
 
 function App() {
   // Create the count state.

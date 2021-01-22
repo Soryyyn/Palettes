@@ -21,6 +21,11 @@ if (process.env.NODE_ENV != "production") {
   app.use(morgan("dev"));
 }
 
+// generate access token from given data and secret
+function generateAccessToken(dataToBeSaved: {}, secret: string) {
+  return jwt.sign(dataToBeSaved, secret, { expiresIn: "30d" });
+}
+
 
 /**
  * MIDDLEWARES
@@ -65,11 +70,6 @@ function authJWT(req: any, res: any, next: any) {
   }
 }
 
-// generate access token from given data and secret
-function generateAccessToken(dataToBeSaved: {}, secret: string) {
-  return jwt.sign(dataToBeSaved, secret, { expiresIn: "30d" });
-}
-
 
 /**
  * POST REQUESTS
@@ -110,7 +110,7 @@ app.post("/signup", rateLimit({
         });
       } else {
         // sign token after sign up
-        const accessToken = generateAccessToken({ email: doc.email, role: doc.role }, process.env.JWT_SECRET);
+        const accessToken = generateAccessToken({ email: doc.email }, process.env.JWT_SECRET);
 
         res.json({
           user: doc,
@@ -161,7 +161,7 @@ app.post("/signin", rateLimit({
                 msg: "Email/Password combination wrong"
               });
             } else {
-              const accessToken = generateAccessToken({ email: doc.email, role: doc.role }, process.env.JWT_SECRET);
+              const accessToken = generateAccessToken({ email: doc.email }, process.env.JWT_SECRET);
 
               res.json({
                 user: doc,
