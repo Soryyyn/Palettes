@@ -1,23 +1,24 @@
 {
-  "compilerOptions": {
-    "declaration": true,
-    "lib": [
-      "ES6",
-      "DOM"
-    ],
-    "module": "commonjs",
-    "esModuleInterop": true,
-    "moduleResolution": "node",
-    "noEmitOnError": true,
-    "noImplicitReturns": true,
-    "removeComments": true,
-    "sourceMap": true,
-    "target": "ES6",
-    "rootDir": "./src",
-    "outDir": "./dist"
-  },
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+    "compilerOptions": {
+        "declaration": true,
+        "lib": [
+            "ES6",
+            "DOM"
+        ],
+        "module": "commonjs",
+        "esModuleInterop": true,
+        "moduleResolution": "node",
+        "noEmitOnError": true,
+        "noImplicitReturns": true,
+        "removeComments": true,
+        "sourceMap": true,
+        "target": "ES6",
+        "rootDir": "./src",
+        "outDir": "./dist",
+        "noEmit": true,
+    },
+    "exclude": [
+        "node_modules",
+        "dist"
+    ]
 }
