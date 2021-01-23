@@ -1,11 +1,13 @@
 .App {
-  text-align: center;
+	text-align: center;
+
+	code {
+		background: #FFF3;
+		padding: 4px 8px;
+		border-radius: 4px;
+	}
 }
-.App code {
-  background: #FFF3;
-  padding: 4px 8px;
-  border-radius: 4px;
-}
+
 .App p {
   margin: 0.4rem;
 }
